@@ -39,8 +39,8 @@ function normalizePath(pth) {
             forceError("Path \"" + pth + "\" does not exist");
         } else {
             var pthLst = pth.split(path.sep);
-            fileName = pth.slice(-1)[0];
-            pth = pth.slice(0, -1).join(path.sep);
+            fileName = pthLst.slice(-1)[0];
+            pth = pthLst.slice(0, -1).join(path.sep);
             if (!fs.existsSync(pth)) {
                 forceError("Parent directory \"" + pth + "\" does not exist");
             }
