@@ -140,6 +140,7 @@ async function getReleaseParams(tagName){
         chatter("Release " + tagName + " already exists, reusing");
     } catch(e) {
         chatter("Release " + tagName + " does not yet exist, creating");
+        console.log(JSON.stringify({ owner: "Juris-M", repo: "assets", tag_name: tagName }, null, 2))
         var release = await octokit.repos.createRelease({ owner: "Juris-M", repo: "assets", tag_name: tagName });
     }
     return {
@@ -202,16 +203,20 @@ async function pushAssets(releaseID, uploadTemplate, fileNames, assetName) {
 }
 
 async function removeAssets(filePaths, assetInfo) {
-    var fileNames = filePaths.map(function(pth){
-        return path.basename(pth);
-    });
-    for (var info of assetInfo) {
-        if (fileNames.indexOf(info.assetName) === -1) continue;
-        await octokit.repos.deleteAsset({
-            owner: "Juris-M",
-            repo: "assets",
-            id: info.assetID
+    try {
+        var fileNames = filePaths.map(function(pth){
+            return path.basename(pth);
         });
+        for (var info of assetInfo) {
+            if (fileNames.indexOf(info.assetName) === -1) continue;
+            await octokit.repos.deleteAsset({
+                owner: "Juris-M",
+                repo: "assets",
+                id: info.assetID
+            });
+        }
+    } catch(e) {
+        forceError(e);
     }
 }
 
@@ -303,6 +308,10 @@ if (opt_count === 0) {
 
 if (opt.options.exclude && !opt.options.upload) {
     forceError("The -x option is available only with -u")
+}
+
+if (opt.options.quiet) {
+    config.quiet = true;
 }
 
 authenticate();
