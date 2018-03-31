@@ -29,6 +29,7 @@ function authenticate () {
 
 function normalizePath(pth) {
     var demandsDirectory = false;
+    var fileName = "";
     if (pth.slice(-1) === path.sep) {
         pth = pth.slice(0, -1);
         demandsDirectory = true;
@@ -37,13 +38,17 @@ function normalizePath(pth) {
         if (demandsDirectory) {
             forceError("Path \"" + pth + "\" does not exist");
         } else {
-            var parentDir = path.dirname(pth.split(path.sep).slice(0, -1).join(path.sep));
-            if (!fs.existsSync(parentDir)) {
-                forceError("Parent directory \"" + parentDir + "\" does not exist");
+            var pthLst = pth.split(path.sep);
+            fileName = pth.slice(-1)[0];
+            pth = pth.slice(0, -1).join(path.sep);
+            if (!fs.existsSync(pth)) {
+                forceError("Parent directory \"" + pth + "\" does not exist");
             }
         }
     }
-    return pth;
+    return {
+        pathName: pth,
+        fileName: fileName
 }
 
 function getFilePaths(pth, exclude) {
@@ -90,8 +95,8 @@ function getValidPaths(argv, exclude, downloadOrder) {
         var pathPos = 0;
         var tagPos = 1;
     }
-    var pth = normalizePath(argv[pathPos]);
-    var {fileNames, isDirectory} = getFilePaths(pth, exclude);
+    var {pathName, fileName} = normalizePath(argv[pathPos]);
+    var {fileNames, isDirectory} = getFilePaths(pathName, exclude);
     var {tagName, assetName} = getTagPaths(argv[tagPos]);
     if (isDirectory) {
         if (assetName) {
@@ -102,7 +107,10 @@ function getValidPaths(argv, exclude, downloadOrder) {
         if (fileNames.length !== 1 || !assetName) {
             forceError("Invalid arguments. Path to file needs explicit tag/asset as target");
         }
-        var dirName = path.dirname(pth);
+        if (fileNames[0] && fileName) {
+            forceError("Parent of file " + fileName + " is also a file");
+        }
+        var dirName = path.dirname(pathName);
     }
     return {
         dirName: dirName,
