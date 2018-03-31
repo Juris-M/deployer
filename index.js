@@ -100,7 +100,7 @@ function getValidPaths(argv, exclude, downloadOrder) {
     var {fileNames, isDirectory} = getFilePaths(pathName, exclude);
     var {tagName, assetName} = getTagPaths(argv[tagPos]);
     if (isDirectory) {
-        if (assetName) {
+        if (assetName && !fileName) {
             forceError("Invalid arguments. Path to directory needs to have tag/ as target (i.e. nothing after the slash)")
         }
         var dirName = pth;
