@@ -28,9 +28,20 @@ function authenticate () {
 }
 
 function normalizePath(pth) {
-    pth = pth.replace(/\/$/, "");
+    var demandsDirectory = false;
+    if (pth.slice(-1) === path.sep) {
+        pth = pth.slice(0, -1);
+        demandsDirectory = true;
+    }
     if (!fs.existsSync(pth)) {
-        forceError("Path \"" + pth + "\" does not exist");
+        if (demandsDirectory) {
+            forceError("Path \"" + pth + "\" does not exist");
+        } else {
+            var parentDir = path.dirname(pth.split(path.sep).slice(0, -1).join(path.sep));
+            if (!fs.existsSync(parentDir)) {
+                forceError("Parent directory \"" + parentDir + "\" does not exist");
+            }
+        }
     }
     return pth;
 }
