@@ -1,0 +1,25 @@
+{
+  "name": "deployer",
+  "version": "1.0.0",
+  "description": "Implements copy-up/copy-down from GitHub release",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juris-m/deployer.git"
+  },
+  "author": "Frank Bennett",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/juris-m/deployer/issues"
+  },
+  "homepage": "https://github.com/juris-m/deployer#readme",
+  "dependencies": {
+    "fs-then": "^0.2.0",
+    "micromatch": "^3.1.10",
+    "node-getopt": "^0.3.1",
+    "url-template": "^2.0.8"
+  }
+}
