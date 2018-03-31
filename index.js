@@ -14,6 +14,12 @@ var config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json")));
  * Utilities
  */
 
+function chatter(txt) {
+    if (!config.quiet) {
+        console.log(txt);
+    }
+}
+
 function forceError(txt) {
     console.log("deployer: " + txt);
     process.exit(1);
@@ -131,9 +137,9 @@ async function getReleaseParams(tagName){
     // Get a release object
     try {
         var release = await octokit.repos.getReleaseByTag({ owner: "Juris-M", repo: "assets", tag: tagName })
-        console.log("Release " + tagName + " already exists, reusing");
+        chatter("Release " + tagName + " already exists, reusing");
     } catch(e) {
-        console.log("Release " + tagName + " does not yet exist, creating");
+        chatter("Release " + tagName + " does not yet exist, creating");
         var release = await octokit.repos.createRelease({ owner: "Juris-M", repo: "assets", tag_name: tagName });
     }
     return {
@@ -222,7 +228,7 @@ async function checkAccess() {
     } catch(e) {
         forceError("Something went wrong with authorization");
     }
-    console.log("deployer: repo access OK");
+    chatter("deployer: repo access OK");
     process.exit(0);
 }
 
@@ -239,29 +245,33 @@ async function upload(argv, exclude) {
 }
 
 async function download(argv) {
-    var {dirName, fileNames, tagName, assetName, forceFile} = getValidPaths(argv, null, true);
-    var {releaseID, uploadTemplate} = await getReleaseParams(tagName);
-    var assetInfo = await getReleaseAssetInfo(releaseID);
+    try {
+        var {dirName, fileNames, tagName, assetName, forceFile} = getValidPaths(argv, null, true);
+        var {releaseID, uploadTemplate} = await getReleaseParams(tagName);
+        var assetInfo = await getReleaseAssetInfo(releaseID);
 
-    // Download all assets in the target release
-    var doneForceFile = false
-    for (var info of assetInfo) {
-        if (assetName && assetName !== info.assetName) {
-            continue;
-        } else {
-            if (assetName && forceFile) {
-                var fn = forceFile;
-                doneForceFile = true;
+        // Download all assets in the target release
+        var doneForceFile = false
+        for (var info of assetInfo) {
+            if (assetName && assetName !== info.assetName) {
+                continue;
             } else {
-                var fn = info.assetName;
+                if (assetName && forceFile) {
+                    var fn = forceFile;
+                    doneForceFile = true;
+                } else {
+                    var fn = info.assetName;
+                }
             }
+            var res = await fetch(info.assetURL);
+            var txt = await res.text();
+            fs.writeFileSync(path.join(dirName, fn), txt);
         }
-        var res = await fetch(info.assetURL);
-        var txt = await res.text();
-        fs.writeFileSync(path.join(dirName, fn), txt);
-    }
-    if (assetName && forceFile) {
-        fs.writeFileSync(path.join(dirName, forceFile), "");
+        if (assetName && forceFile) {
+            fs.writeFileSync(path.join(dirName, forceFile), "");
+        }
+    } catch(e) {
+        forceError(e)
     }
 }
 
@@ -270,6 +280,7 @@ var opt = require('node-getopt').create([
   ['d' 		, 'download', 'Download. First argument assumed to be tag/ or tag/asset.'],
   ['x' 		, 'exclude=ARG+',  'Exclude. Ignore files matching glob. Multiple instances allowed. Valid only with -u option.'],
   ['v' 		, 'validate', 'Validate. Check access. Assumes no arguments.'],
+  ['q' 		, 'quiet', 'Quiet. Do not produce any chatter.'],
   ['h' 		, 'help'                , 'display this help']
 ])              // create Getopt instance
 .bindHelp()     // bind option 'help' to default action
@@ -283,18 +294,15 @@ for (var o of ["download", "upload", "validate"]) {
 }
 
 if (opt_count > 1) {
-    console.log("Can only select one of -d, -u or -v");
-    process.exit();
+    forceError("Can only select one of -d, -u or -v");
 }
 
 if (opt_count === 0) {
-    console.log("Must select one of -d, -u or -v");
-    process.exit();
+    forceError("Must select one of -d, -u or -v");
 }
 
 if (opt.options.exclude && !opt.options.upload) {
-    console.log("The -x option is available only with -u")
-    process.exit();
+    forceError("The -x option is available only with -u")
 }
 
 authenticate();
@@ -307,12 +315,9 @@ if (opt.options.upload || opt.options.download) {
     if (opt.argv.length !== 2) {
         forceError("Exactly two arguments are required with the -u option")
     }
-    console.log("Go")
     if (opt.options.upload) {
-    console.log("Go upload")
         upload(opt.argv, opt.options.exclude)
     } else {
-    console.log("Go download")
         download(opt.argv)
     }
 }
