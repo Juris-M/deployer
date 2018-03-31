@@ -96,20 +96,20 @@ function getValidPaths(argv, exclude, downloadOrder) {
         var pathPos = 0;
         var tagPos = 1;
     }
-    var {pathName, fileName} = normalizePath(argv[pathPos]);
+    var {pathName, forceFile} = normalizePath(argv[pathPos]);
     var {fileNames, isDirectory} = getFilePaths(pathName, exclude);
     var {tagName, assetName} = getTagPaths(argv[tagPos]);
     if (isDirectory) {
-        if (assetName && !fileName) {
+        if (assetName && !forceFile) {
             forceError("Invalid arguments. Path to directory needs to have tag/ as target (i.e. nothing after the slash)")
         }
         var dirName = pathName;
     } else {
+        if (forceFile) {
+            fileNames = [forceFile]
+        }
         if (fileNames.length !== 1 || !assetName) {
             forceError("Invalid arguments. Path to file needs explicit tag/asset as target");
-        }
-        if (fileNames[0] && fileName) {
-            forceError("Parent of file " + fileName + " is also a file");
         }
         var dirName = path.dirname(pathName);
     }
@@ -249,6 +249,7 @@ async function upload(argv, exclude) {
 }
 
 async function download(argv) {
+    console.log("Hey!")
     var {dirName, fileNames, tagName, assetName} = getValidPaths(argv, null, true);
     var {releaseID, uploadTemplate} = await getReleaseParams(tagName);
     var assetInfo = await getReleaseAssetInfo(releaseID);
@@ -257,6 +258,7 @@ async function download(argv) {
     for (var info of assetInfo) {
         var res = await fetch(info.assetURL);
         var txt = await res.text();
+        console.log("Write file syncing")
         fs.writeFileSync(path.join(dirName, info.assetName), txt);
     }
 }
@@ -303,9 +305,12 @@ if (opt.options.upload || opt.options.download) {
     if (opt.argv.length !== 2) {
         forceError("Exactly two arguments are required with the -u option")
     }
+    console.log("Go")
     if (opt.options.upload) {
+    console.log("Go upload")
         upload(opt.argv, opt.options.exclude)
     } else {
+    console.log("Go download")
         download(opt.argv)
     }
 }
