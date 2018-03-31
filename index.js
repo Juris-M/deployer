@@ -103,7 +103,7 @@ function getValidPaths(argv, exclude, downloadOrder) {
         if (assetName && !fileName) {
             forceError("Invalid arguments. Path to directory needs to have tag/ as target (i.e. nothing after the slash)")
         }
-        var dirName = pth;
+        var dirName = pathName;
     } else {
         if (fileNames.length !== 1 || !assetName) {
             forceError("Invalid arguments. Path to file needs explicit tag/asset as target");
