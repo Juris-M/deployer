@@ -48,7 +48,7 @@ function normalizePath(pth) {
     }
     return {
         pathName: pth,
-        fileName: fileName
+        forceFile: fileName
     }
 }
 
@@ -105,19 +105,21 @@ function getValidPaths(argv, exclude, downloadOrder) {
         }
         var dirName = pathName;
     } else {
+        var dirName = path.dirname(pathName);
         if (forceFile) {
-            fileNames = [forceFile]
+            fileNames = [path.join(dirName, forceFile)]
+            
         }
         if (fileNames.length !== 1 || !assetName) {
             forceError("Invalid arguments. Path to file needs explicit tag/asset as target");
         }
-        var dirName = path.dirname(pathName);
     }
     return {
         dirName: dirName,
         fileNames: fileNames,
         tagName: tagName,
-        assetName: assetName
+        assetName: assetName,
+        forceFile: forceFile
     }
 }
 
@@ -207,15 +209,6 @@ async function removeAssets(filePaths, assetInfo) {
     }
 }
 
-async function fetchAssets(releaseID, dirName, assetName) {
-    var assets = await octokit.repos.getAssets({
-        owner: "Juris-M",
-        repo: "assets",
-        id: releaseID
-    });
-    console.log(JSON.stringify(assets, null, 2))
-};
-
 /*
  * Public
  */
@@ -243,23 +236,32 @@ async function upload(argv, exclude) {
 
     // Push our files into the release
     await pushAssets(releaseID, uploadTemplate, fileNames, assetName)
-
-    // Done!
-    console.log("Done!");
 }
 
 async function download(argv) {
-    console.log("Hey!")
-    var {dirName, fileNames, tagName, assetName} = getValidPaths(argv, null, true);
+    var {dirName, fileNames, tagName, assetName, forceFile} = getValidPaths(argv, null, true);
     var {releaseID, uploadTemplate} = await getReleaseParams(tagName);
     var assetInfo = await getReleaseAssetInfo(releaseID);
 
     // Download all assets in the target release
+    var doneForceFile = false
     for (var info of assetInfo) {
+        if (assetName && assetName !== info.assetName) {
+            continue;
+        } else {
+            if (assetName && forceFile) {
+                var fn = forceFile;
+                doneForceFile = true;
+            } else {
+                var fn = info.assetName;
+            }
+        }
         var res = await fetch(info.assetURL);
         var txt = await res.text();
-        console.log("Write file syncing")
-        fs.writeFileSync(path.join(dirName, info.assetName), txt);
+        fs.writeFileSync(path.join(dirName, fn), txt);
+    }
+    if (assetName && forceFile) {
+        fs.writeFileSync(path.join(dirName, forceFile), "");
     }
 }
 
