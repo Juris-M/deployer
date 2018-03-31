@@ -49,6 +49,7 @@ function normalizePath(pth) {
     return {
         pathName: pth,
         fileName: fileName
+    }
 }
 
 function getFilePaths(pth, exclude) {
