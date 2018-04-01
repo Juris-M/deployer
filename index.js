@@ -276,9 +276,6 @@ async function download(argv) {
             var txt = await res.text();
             fs.writeFileSync(path.join(dirName, fn), txt);
         }
-        if (assetName && forceFile) {
-            fs.writeFileSync(path.join(dirName, forceFile), "");
-        }
     } catch(e) {
         forceError(e)
     }
