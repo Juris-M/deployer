@@ -36,7 +36,7 @@ function authenticate () {
 function normalizePath(pth) {
     var demandsDirectory = false;
     var fileName = "";
-    if (pth.slice(-1) === path.sep) {
+    if (pth.slice(-1) === "/") {
         pth = pth.slice(0, -1);
         demandsDirectory = true;
     }
@@ -44,9 +44,9 @@ function normalizePath(pth) {
         if (demandsDirectory) {
             forceError("Path \"" + pth + "\" does not exist");
         } else {
-            var pthLst = pth.split(path.sep);
+            var pthLst = pth.split("/");
             fileName = pthLst.slice(-1)[0];
-            pth = pthLst.slice(0, -1).join(path.sep);
+            pth = pthLst.slice(0, -1).join("/");
             if (!fs.existsSync(pth)) {
                 forceError("Parent directory \"" + pth + "\" does not exist");
             }
@@ -276,6 +276,10 @@ async function download(argv) {
             var txt = await res.text();
             fs.writeFileSync(path.join(dirName, fn), txt);
         }
+        if (assetName && forceFile && !doneForceFile) {
+            fs.writeFileSync(path.join(dirName, forceFile), "");
+        }
+
     } catch(e) {
         forceError(e)
     }
