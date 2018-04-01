@@ -141,7 +141,11 @@ async function getReleaseParams(tagName){
     } catch(e) {
         chatter("Release " + tagName + " does not yet exist, creating");
         console.log(JSON.stringify({ owner: "Juris-M", repo: "assets", tag_name: tagName }, null, 2))
-        var release = await octokit.repos.createRelease({ owner: "Juris-M", repo: "assets", tag_name: tagName });
+        try {
+            var release = await octokit.repos.createRelease({ owner: "Juris-M", repo: "assets", tag_name: tagName });
+        } catch(e) {
+            forceError(e);
+        }
     }
     return {
         releaseID: release.data.id,
