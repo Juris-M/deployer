@@ -5,10 +5,13 @@
 var fs = require("fs");
 var path = require("path");
 var mm = require("micromatch");
-var octokit = require("@octokit/rest")();
 var fetch = require("node-fetch");
 
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json")));
+
+var octokit = require("@octokit/rest")({
+  auth: config.access
+});
 
 /*
  * Utilities
@@ -25,13 +28,13 @@ function forceError(txt) {
     process.exit(1);
 }
 
-function authenticate () {
-    octokit.authenticate({
-        type: 'basic',
-        username: config.username,
-        password: config.password
-    })
-}
+//function authenticate () {
+//    octokit.authenticate({
+//        type: 'basic',
+//        username: config.username,
+//        password: config.password
+//    })
+//}
 
 function normalizePath(pth) {
     var demandsDirectory = false;
