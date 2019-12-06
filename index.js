@@ -9,9 +9,7 @@ var fetch = require("node-fetch");
 
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json")));
 
-var octokit = require("@octokit/rest")({
-  auth: config.access
-});
+var octokit = require("@octokit/rest")();
 
 /*
  * Utilities
@@ -35,6 +33,13 @@ function forceError(txt) {
 //        password: config.password
 //    })
 //}
+
+function authenticate () {
+    octokit.authenticate({
+        type: 'token',
+        token: config.access
+    })
+}
 
 function normalizePath(pth) {
     var demandsDirectory = false;
