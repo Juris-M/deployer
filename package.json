@@ -17,10 +17,10 @@
   },
   "homepage": "https://github.com/juris-m/deployer#readme",
   "dependencies": {
-    "@octokit/rest": "^15.2.6",
+    "@octokit/rest": "^15.18.3",
     "fs-then": "^0.2.0",
     "micromatch": "^3.1.10",
-    "node-getopt": "^0.3.1",
+    "node-getopt": "^0.3.2",
     "url-template": "^2.0.8"
   }
 }
