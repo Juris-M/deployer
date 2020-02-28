@@ -9,7 +9,8 @@ var fetch = require("node-fetch");
 
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json")));
 
-var octokit = require("@octokit/rest")();
+const { Octokit } = require("@octokit/rest");
+const octokit = new Octokit();
 
 /*
  * Utilities
