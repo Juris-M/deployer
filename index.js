@@ -7,10 +7,12 @@ var path = require("path");
 var mm = require("micromatch");
 var fetch = require("node-fetch");
 
-var config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json")));
+var config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json")).toString());
 
 const { Octokit } = require("@octokit/rest");
-const octokit = new Octokit();
+const octokit = new Octokit({
+    auth: config.access
+});
 
 /*
  * Utilities
@@ -18,28 +20,16 @@ const octokit = new Octokit();
 
 function chatter(txt) {
     if (!config.quiet) {
-        console.log(txt);
+        process.stderr.write(txt+"\n");
     }
 }
 
-function forceError(txt) {
+function forceError(txt, e) {
     console.log("deployer: " + txt);
+    if (e) {
+        console.log(e);
+    }
     process.exit(1);
-}
-
-//function authenticate () {
-//    octokit.authenticate({
-//        type: 'basic',
-//        username: config.username,
-//        password: config.password
-//    })
-//}
-
-function authenticate () {
-    octokit.authenticate({
-        type: 'token',
-        token: config.access
-    })
 }
 
 function normalizePath(pth) {
@@ -159,35 +149,26 @@ async function getReleaseParams(tagName){
         chatter("Release " + tagName + " already exists, reusing");
     } catch(e) {
         chatter("Release " + tagName + " does not yet exist, creating");
-        console.log(JSON.stringify({ owner: "Juris-M", repo: "assets", tag_name: tagName }, null, 2))
+        chatter(JSON.stringify({ owner: "Juris-M", repo: "assets", tag_name: tagName }, null, 2))
         try {
             var release = await octokit.repos.createRelease({ owner: "Juris-M", repo: "assets", tag_name: tagName });
         } catch(e) {
             forceError(e);
         }
     }
-    return {
-        releaseID: release.data.id,
-        uploadTemplate: release.data.upload_url
-    }
-}
-
-async function getReleaseAssetInfo(releaseID) {
-    // Get a list of existing assets
-    var ret = [];
-    try {
-        var assets = await octokit.repos.getAssets({ owner: "Juris-M", repo: "assets", id: releaseID })
-    } catch(e) {
-        forceError("Unable to acquire assets for release tag " + tag + " for some reason");
-    }
-    for (var asset of assets.data) {
-        ret.push({
+    var assetInfo = [];
+    for (var asset of release.data.assets) {
+        assetInfo.push({
             assetID: asset.id,
             assetName: asset.name,
             assetURL: asset.browser_download_url
-        })
+        });
     }
-    return ret;
+    return {
+        releaseID: release.data.id,
+        uploadTemplate: release.data.upload_url,
+        assetInfo: assetInfo
+    }
 }
 
 async function pushAssets(releaseID, uploadTemplate, fileNames, assetName, contentType) {
@@ -197,10 +178,10 @@ async function pushAssets(releaseID, uploadTemplate, fileNames, assetName, conte
             contentType = "application/octet-stream";
         }
         if (assetName) {
-            var fileBuffer = fs.readFileSync(fileNames[0]);
+            var fileBuffer = fs.readFileSync(fileNames[0]).toString();
             var fileSize = fs.lstatSync(fileNames[0]).size;
             if (!fileSize) return;
-            await octokit.repos.uploadAsset({
+            await octokit.repos.uploadReleaseAsset({
                 url: uploadTemplate,
                 file: fileBuffer,
                 contentType: contentType,
@@ -212,8 +193,8 @@ async function pushAssets(releaseID, uploadTemplate, fileNames, assetName, conte
                 var assetName = path.basename(fileName);
                 var fileSize = fs.lstatSync(fileName).size;
                 if (!fileSize) continue;
-                var fileBuffer = fs.readFileSync(fileName);
-                await octokit.repos.uploadAsset({
+                var fileBuffer = fs.readFileSync(fileName).toString();
+                await octokit.repos.uploadReleaseAsset({
                     url: uploadTemplate,
                     file: fileBuffer,
                     contentType: contentType,
@@ -228,16 +209,18 @@ async function pushAssets(releaseID, uploadTemplate, fileNames, assetName, conte
 }
 
 async function removeAssets(filePaths, assetInfo) {
+    console.log(JSON.stringify(assetInfo, null, 2));
     try {
         var fileNames = filePaths.map(function(pth){
             return path.basename(pth);
         });
         for (var info of assetInfo) {
             if (fileNames.indexOf(info.assetName) === -1) continue;
-            await octokit.repos.deleteAsset({
+            console.log("info.assetID=" + info.assetID);
+            await octokit.repos.deleteReleaseAsset({
                 owner: "Juris-M",
                 repo: "assets",
-                id: info.assetID
+                asset_id: info.assetID
             });
         }
     } catch(e) {
@@ -264,8 +247,8 @@ async function checkAccess() {
 
 async function upload(argv, exclude, contentType) {
     var {fileNames, tagName, assetName} = getValidPaths(argv, exclude);
-    var {releaseID, uploadTemplate} = await getReleaseParams(tagName);
-    var assetInfo = await getReleaseAssetInfo(releaseID);
+    var {releaseID, uploadTemplate, assetInfo} = await getReleaseParams(tagName);
+    // console.log("deployer: in upload, for releaseID: " + releaseID);
 
     // Remove assets that have the same name as one of our upload files
     await removeAssets(fileNames, assetInfo);
@@ -277,8 +260,8 @@ async function upload(argv, exclude, contentType) {
 async function download(argv) {
     try {
         var {dirName, fileNames, tagName, assetName, forceFile} = getValidPaths(argv, null, true);
-        var {releaseID, uploadTemplate} = await getReleaseParams(tagName);
-        var assetInfo = await getReleaseAssetInfo(releaseID);
+        var {releaseID, uploadTemplate, assetInfo} = await getReleaseParams(tagName);
+        // console.log("deployer: in download, for releaseID: " + releaseID);
 
         // Download all assets in the target release
         var doneForceFile = false
@@ -350,8 +333,6 @@ if (opt.options.exclude && !opt.options.upload) {
 if (opt.options.quiet) {
     config.quiet = true;
 }
-
-authenticate();
 
 if (opt.options.validate) {
     checkAccess()
