@@ -6,6 +6,7 @@ var fs = require("fs");
 var path = require("path");
 var mm = require("micromatch");
 var fetch = require("node-fetch");
+var url = require("url");
 
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json")).toString());
 
@@ -172,35 +173,42 @@ async function getReleaseParams(tagName){
 }
 
 async function pushAssets(releaseID, uploadTemplate, fileNames, assetName, contentType) {
+    var fileSize, fileContents, urlInfo, uploadParams;
     try {
         //var uploadTemplate
         if (!contentType) {
             contentType = "application/octet-stream";
         }
         if (assetName) {
-            var fileBuffer = fs.readFileSync(fileNames[0]).toString();
-            var fileSize = fs.lstatSync(fileNames[0]).size;
+            fileSize = fs.lstatSync(fileNames[0]).size;
             if (!fileSize) return;
-            await octokit.repos.uploadReleaseAsset({
-                url: uploadTemplate,
-                file: fileBuffer,
-                contentType: contentType,
-                contentLength: fileSize,
-                name: assetName
-            });
+            fileContents = fs.readFileSync(fileNames[0]).toString();
+            urlInfo = new url.URL(uploadTemplate);
+            uploadParams = {
+                owner: "Juris-M",
+                repo: "assets",
+                release_id: releaseID,
+                name: assetName,
+                data: fileContents,
+                origin: urlInfo.origin
+            };
+            await octokit.repos.uploadReleaseAsset(uploadParams);
         } else {
             for (var fileName of fileNames) {
-                var assetName = path.basename(fileName);
-                var fileSize = fs.lstatSync(fileName).size;
+                fileSize = fs.lstatSync(fileName).size;
                 if (!fileSize) continue;
-                var fileBuffer = fs.readFileSync(fileName).toString();
-                await octokit.repos.uploadReleaseAsset({
-                    url: uploadTemplate,
-                    file: fileBuffer,
-                    contentType: contentType,
-                    contentLength: fileSize,
-                    name: assetName
-                });
+                assetName = path.basename(fileName);
+                urlInfo = new url.URL(uploadTemplate);
+                fileContents = fs.readFileSync(fileName).toString();
+                uploadParams = {
+                    owner: "Juris-M",
+                    repo: "assets",
+                    release_id: releaseID,
+                    name: assetName,
+                    data: fileContents,
+                    origin: urlInfo.origin
+                };
+                await octokit.repos.uploadReleaseAsset(uploadParams);
             }
         }
     } catch(e) {
@@ -209,14 +217,12 @@ async function pushAssets(releaseID, uploadTemplate, fileNames, assetName, conte
 }
 
 async function removeAssets(filePaths, assetInfo) {
-    console.log(JSON.stringify(assetInfo, null, 2));
     try {
         var fileNames = filePaths.map(function(pth){
             return path.basename(pth);
         });
         for (var info of assetInfo) {
             if (fileNames.indexOf(info.assetName) === -1) continue;
-            console.log("info.assetID=" + info.assetID);
             await octokit.repos.deleteReleaseAsset({
                 owner: "Juris-M",
                 repo: "assets",
