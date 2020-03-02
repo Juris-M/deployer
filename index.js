@@ -182,7 +182,7 @@ async function pushAssets(releaseID, uploadTemplate, fileNames, assetName, conte
         if (assetName) {
             fileSize = fs.lstatSync(fileNames[0]).size;
             if (!fileSize) return;
-            fileContents = fs.readFileSync(fileNames[0]).toString();
+            fileContents = fs.readFileSync(fileNames[0]);
             urlInfo = new url.URL(uploadTemplate);
             uploadParams = {
                 owner: "Juris-M",
@@ -199,7 +199,7 @@ async function pushAssets(releaseID, uploadTemplate, fileNames, assetName, conte
                 if (!fileSize) continue;
                 assetName = path.basename(fileName);
                 urlInfo = new url.URL(uploadTemplate);
-                fileContents = fs.readFileSync(fileName).toString();
+                fileContents = fs.readFileSync(fileName);
                 uploadParams = {
                     owner: "Juris-M",
                     repo: "assets",
