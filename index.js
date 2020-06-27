@@ -275,6 +275,7 @@ async function download(argv) {
             if (assetName && assetName !== info.assetName) {
                 continue;
             } else if (argv.length === 1) {
+	        console.log(`Call URL [1]: ${info.assetURL}`)
                 var res = await fetch(info.assetURL);
                 var txt = await res.text();
                 fs.writeSync(process.stdout.fd, txt);
@@ -292,6 +293,7 @@ async function download(argv) {
                     var fn = info.assetName;
                 }
             }
+	    console.log(`Call URL [2]: ${info.assetURL}`)
             var res = await fetch(info.assetURL);
             var txt = await res.text();
             fs.writeFileSync(path.join(dirName, fn), txt);
