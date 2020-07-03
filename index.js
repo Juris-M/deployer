@@ -263,7 +263,7 @@ async function upload(argv, exclude, contentType) {
     await pushAssets(releaseID, uploadTemplate, fileNames, assetName, contentType)
 }
 
-async function download(argv) {
+async function download(argv, quiet) {
     try {
         var {dirName, fileNames, tagName, assetName, forceFile} = getValidPaths(argv, null, true);
         var {releaseID, uploadTemplate, assetInfo} = await getReleaseParams(tagName);
@@ -275,7 +275,9 @@ async function download(argv) {
             if (assetName && assetName !== info.assetName) {
                 continue;
             } else if (argv.length === 1) {
-	        console.log(`Call URL [1]: ${info.assetURL}`)
+	        if (!quiet) {
+	            console.log(`Call URL [1]: ${info.assetURL}`);
+		}
                 var res = await fetch(info.assetURL);
                 var txt = await res.text();
                 fs.writeSync(process.stdout.fd, txt);
@@ -293,7 +295,9 @@ async function download(argv) {
                     var fn = info.assetName;
                 }
             }
-	    console.log(`Call URL [2]: ${info.assetURL}`)
+	    if (!quiet) {
+	        console.log(`Call URL [2]: ${info.assetURL}`);
+	    }
             var res = await fetch(info.assetURL);
             var txt = await res.text();
             fs.writeFileSync(path.join(dirName, fn), txt);
@@ -357,5 +361,5 @@ if (opt.options.download) {
     if (opt.argv.length < 1 || opt.argv.length > 2) {
         forceError("Either one or two arguments exactly are required with the -d option");
     }
-    download(opt.argv);
+    download(opt.argv, opt.options.quiet);
 }
