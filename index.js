@@ -55,7 +55,7 @@ function normalizePath(pth) {
     return {
         pathName: pth,
         forceFile: fileName
-    }
+    };
 }
 
 function getFilePaths(pth, exclude) {
@@ -73,12 +73,12 @@ function getFilePaths(pth, exclude) {
     } else if (stats.isFile()) {
         files.push(pth);
     } else {
-        forceError("Path " + pth + " is neither file nor directory")
+        forceError("Path " + pth + " is neither file nor directory");
     }
     return {
         fileNames: files,
         isDirectory: isDirectory
-    }
+    };
 }
 
 function getTagPaths(tag) {
@@ -91,7 +91,7 @@ function getTagPaths(tag) {
     return {
         tagName: tag,
         assetName: filename
-    }
+    };
 }
 
 function getValidPaths(argv, exclude, downloadOrder) {
@@ -109,14 +109,14 @@ function getValidPaths(argv, exclude, downloadOrder) {
         }
         var dirName = false;
         var fileNames = [];
-        var forceFile = false
+        var forceFile = false;
     } else {
         var {pathName, forceFile} = normalizePath(argv[pathPos]);
         var {fileNames, isDirectory} = getFilePaths(pathName, exclude);
         var {tagName, assetName} = getTagPaths(argv[tagPos]);
         if (isDirectory) {
             if (assetName && !forceFile) {
-                forceError("Invalid arguments. Path to directory needs to have tag/ as target (i.e. nothing after the slash)")
+                forceError("Invalid arguments. Path to directory needs to have tag/ as target (i.e. nothing after the slash)");
             }
             var dirName = pathName;
         } else {
@@ -136,7 +136,7 @@ function getValidPaths(argv, exclude, downloadOrder) {
         tagName: tagName,
         assetName: assetName,
         forceFile: forceFile
-    }
+    };
 }
 
 /*
@@ -146,11 +146,13 @@ function getValidPaths(argv, exclude, downloadOrder) {
 async function getReleaseParams(tagName){
     // Get a release object
     try {
-        var release = await octokit.repos.getReleaseByTag({ owner: "Juris-M", repo: "assets", tag: tagName })
+        var release = await octokit.repos.getReleaseByTag({ owner: "Juris-M", repo: "assets", tag: tagName });
         chatter("Release " + tagName + " already exists, reusing");
     } catch(e) {
-        chatter("Release " + tagName + " does not yet exist, creating");
-        chatter(JSON.stringify({ owner: "Juris-M", repo: "assets", tag_name: tagName }, null, 2))
+        if (e.status && e.status != 401) {
+            chatter("Release " + tagName + " does not yet exist, creating");
+        }
+        chatter(JSON.stringify({ owner: "Juris-M", repo: "assets", tag_name: tagName }, null, 2));
         try {
             var release = await octokit.repos.createRelease({ owner: "Juris-M", repo: "assets", tag_name: tagName });
         } catch(e) {
@@ -169,7 +171,7 @@ async function getReleaseParams(tagName){
         releaseID: release.data.id,
         uploadTemplate: release.data.upload_url,
         assetInfo: assetInfo
-    }
+    };
 }
 
 async function pushAssets(releaseID, uploadTemplate, fileNames, assetName, contentType) {
@@ -238,19 +240,6 @@ async function removeAssets(filePaths, assetInfo) {
  * Public
  */
 
-async function checkAccess() {
-    try {
-        var result = await octokit.authorization.getAll({
-            page: 1,
-            per_page: 1
-        })
-    } catch(e) {
-        forceError("Something went wrong with authorization");
-    }
-    chatter("deployer: repo access OK");
-    process.exit(0);
-}
-
 async function upload(argv, exclude, contentType) {
     var {fileNames, tagName, assetName} = getValidPaths(argv, exclude);
     var {releaseID, uploadTemplate, assetInfo} = await getReleaseParams(tagName);
@@ -270,14 +259,14 @@ async function download(argv, quiet) {
         // console.log("deployer: in download, for releaseID: " + releaseID);
 
         // Download all assets in the target release
-        var doneForceFile = false
+        var doneForceFile = false;
         for (var info of assetInfo) {
             if (assetName && assetName !== info.assetName) {
                 continue;
             } else if (argv.length === 1) {
-	        if (!quiet) {
-	            console.log(`Call URL [1]: ${info.assetURL}`);
-		}
+                if (!quiet) {
+                    console.log(`Call URL [1]: ${info.assetURL}`);
+                }
                 var res = await fetch(info.assetURL);
                 var txt = await res.text();
                 fs.writeSync(process.stdout.fd, txt);
@@ -295,9 +284,9 @@ async function download(argv, quiet) {
                     var fn = info.assetName;
                 }
             }
-	    if (!quiet) {
-	        console.log(`Call URL [2]: ${info.assetURL}`);
-	    }
+            if (!quiet) {
+                console.log(`Call URL [2]: ${info.assetURL}`);
+            }
             var res = await fetch(info.assetURL);
             var txt = await res.text();
             fs.writeFileSync(path.join(dirName, fn), txt);
@@ -307,8 +296,18 @@ async function download(argv, quiet) {
         }
 
     } catch(e) {
-        forceError(e)
+        forceError(e);
     }
+}
+
+async function checkAccess() {
+    try {
+        var result = await getReleaseParams(["connector/firefox/release"]);
+      } catch(e) {
+        forceError("Something went wrong with authorization");
+    }
+    chatter("deployer: repo access OK");
+    process.exit(0);
 }
 
 var opt = require('node-getopt').create([
@@ -316,7 +315,7 @@ var opt = require('node-getopt').create([
   ['d' 		, 'download', 'Download. First argument assumed to be tag/ or tag/asset.'],
   ['x' 		, 'exclude=ARG+',  'Exclude. Ignore files matching glob. Multiple instances allowed. Valid only with -u option.'],
   ['t' 		, 'content_type=ARG',  'contentType. Defaults to application/octet-stream'],
-  ['v' 		, 'validate', 'Validate. Check access. Assumes no arguments.'],
+  ['v' 		, 'validate', 'Validate. Check access. Assumes no arguments. Assumes connector/firefox/release/updates.json'],
   ['q' 		, 'quiet', 'Quiet. Do not produce any chatter.'],
   ['h' 		, 'help'                , 'display this help']
 ])              // create Getopt instance
